@@ -1,0 +1,254 @@
+[
+  {
+    "image_url": "/static/uploads/kaong_20250515_093040.jpg",
+    "assessment": "Unknown",
+    "confidence": 0.5658265948295593,
+    "source": "upload",
+    "timestamp": "2025-05-15T09:30:40.650122"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093051.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.942414402961731,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:30:51.574868"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093051.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9321039319038391,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:30:51.840828"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093440.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8615279197692871,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:41.293999"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093441.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8242025375366211,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:41.579260"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093445.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8801627159118652,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:45.970172"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093446.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8491399884223938,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:46.099080"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093446.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8680065274238586,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:46.597862"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093455.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8516253232955933,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:55.269675"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093455.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8789123296737671,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:55.378893"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093455.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8687452673912048,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:55.673932"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093459.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8580958843231201,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:59.319625"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093459.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8617903590202332,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:34:59.334625"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093500.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8764054179191589,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:00.123702"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093508.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8955416679382324,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:08.194410"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093508.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8897039294242859,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:08.215410"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093508.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8650767803192139,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:08.642105"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093512.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8808861374855042,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:12.170751"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093512.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9035789966583252,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:12.522629"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093513.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8740060925483704,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:13.042408"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093519.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8785417079925537,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:19.455491"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093519.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9077930450439453,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:19.807337"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093519.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8673786520957947,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:19.949506"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093521.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.8479886054992676,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:21.470536"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093521.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.859967052936554,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:35:21.628582"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093717.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9165993332862854,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:17.959534"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093719.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.921394407749176,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:19.395171"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093730.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9228494167327881,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:30.562936"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093730.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9347453117370605,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:30.670478"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093733.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.923477292060852,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:33.379763"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093733.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9323098659515381,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:33.380762"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093734.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9232885241508484,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:34.327227"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093734.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9286969304084778,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:34.421255"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093745.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.928987443447113,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:37:45.882069"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_093746.jpg",
+    "assessment": "Not Ready for Harvesting",
+    "confidence": 0.5,
+    "source": "upload",
+    "timestamp": "2025-05-15T09:37:46.465319"
+  },
+  {
+    "image_url": "/static/uploads/kaong_20250515_094012.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.909446120262146,
+    "source": "camera",
+    "timestamp": "2025-05-15T09:40:13.908506"
+  }
+]]

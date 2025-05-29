@@ -1,0 +1,409 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+.hero{
+    width: 100%;
+    min-height: 100vh;
+    background-color: #f3f3f3;
+    background-position: center;
+    padding: 10px 10%;
+    overflow: hidden;
+    position: relative;
+}
+
+nav{
+    padding: 10px 0;
+    display: flex;
+    align-items: right;
+    justify-content: space-between;
+    
+   
+}
+
+ul{
+    margin-top: -9px;
+}
+.kripenlogo{
+    margin-top: 8px;
+}
+nav ul li{
+
+display: inline-block;
+list-style: none;
+margin: 10px 15px;
+border-radius: 30px;
+
+  
+  
+
+}
+
+
+nav ul li a{
+
+    text-decoration: none;
+    color: #333;
+    font-weight: 600;
+  padding: 10px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  transition-duration: 0.5s;
+  cursor: pointer;
+    
+    }
+    
+
+nav ul li a:hover {
+    background-color: #6B8333;
+    color: #f3f3f3;
+    border-radius: 20px;
+}
+.login-btn{
+    text-decoration: none;
+    color: 333;
+    margin-right: 15px;
+    font-weight: 400;
+}
+
+.btn{
+    display: inline-block;
+    text-decoration: none;
+    padding: 14px 40px;
+    color: #fff;
+    background-image: linear-gradient(45deg, #6B8333, #8aa842);
+    border-radius: 20px;
+    border-top-right-radius: 0;
+    transition: 0.5s;
+
+}
+
+.content{
+    margin-top: 10%;
+    max-width: 600px;
+}
+
+
+.content h1{
+    font-size: 70px;
+    color: #121212;
+}
+.content p{
+    margin: 10px 0 30px;
+    color: #121212;
+}
+.forimage{
+
+    align-items: left;
+}
+.content .btn{
+   padding: 15px 80px;
+   font-size: 16px;
+}
+
+.btn:hover{
+    border-top-right-radius: 20px;
+}
+
+.feature-img{
+   
+    max-width: 600px;
+    position: absolute;
+    bottom: 35%;
+    right: 10%;
+}
+.anim{
+    opacity: 0;
+    transform: translateY(30px);
+    animation: moveup 1s linear forwards;
+
+}
+@keyframes moveup{
+    100%{
+        opacity: 1;
+        transform: translateY(0px)
+    }
+}
+/* Styling for the title above the slider */
+.slider-title {
+    font-size: 4rem; /* Large font size for the title */
+    margin-bottom: 20px; /* Space below the title */
+    font-weight: 600; /* Semi-bold font weight */
+}
+
+/* Main container for the slider - this holds the images and navigation buttons */
+.slider-container {
+    max-width: 600px;
+    position: absolute;
+    bottom: 35%;
+    right: 10%;
+   
+    overflow: hidden; /* Hides the overflow content (only one image is visible at a time) */
+    border-radius: 20px; /* Rounds the corners of the slider */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); /* Adds a subtle shadow for depth */
+}
+
+/* Flexbox container that holds all the slides */
+.slider {
+    display: flex; /* Enables flexbox layout to line up slides horizontally */
+    transition: transform 0.4s ease-in-out; /* Smooth transition when sliding between images */
+}
+
+/* Each individual slide - takes up full width of the container */
+.slide {
+    min-width: 100%; /* Each slide takes up 100% of the slider container's width */
+    height: 350px; /* Fixed height for each slide */
+    transition: transform 0.5s ease-in-out; /* Smooth transition when slides are changed */
+    
+}
+
+/* Ensures that images fill the slide area while maintaining aspect ratio */
+.slide img {
+    width: 100%; /* Image width matches the slide width */
+    height: 100%; /* Image height matches the slide height */
+    object-fit: cover; /* Images are scaled to cover the entire slide, cropping if necessary */
+    border-radius: 10px; /* Rounds the corners of the images to match the slider */
+}
+
+/* Common styling for both previous and next navigation buttons */
+.prev, .next {
+    position: absolute; /* Absolute positioning within the slider container */
+    top: 50%; /* Centers the button vertically */
+    transform: translateY(-50%); /* Offsets the button position by half its height */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+    color: white; /* White color for the arrow icons */
+    border: none; /* Removes default button borders */
+    width: 40px; /* Fixed width for the buttons */
+    height: 40px; /* Fixed height for the buttons */
+    cursor: pointer; /* Changes the cursor to pointer on hover */
+    z-index: 10; /* Ensures buttons appear above the slider content */
+    border-radius: 50%; /* Makes the buttons round */
+    transition: background-color 0.3s ease; /* Smooth transition for background color on hover */
+    display: flex; /* Enables flexbox for centering the arrow inside the button */
+    justify-content: center; /* Centers arrow horizontally */
+    align-items: center; /* Centers arrow vertically */
+    padding: 0; /* Removes any default padding */
+}
+
+/* Positioning the previous button to the left */
+.prev {
+    left: 10px; /* Positions the button 10px from the left edge */
+}
+
+/* Positioning the next button to the right */
+.next {
+    right: 10px; /* Positions the button 10px from the right edge */
+}
+
+/* Hover effect for navigation buttons */
+.prev:hover, .next:hover {
+    background-color: rgba(0, 0, 0, 0.8); /* Darkens the button background on hover */
+}
+
+/* Container for the dot indicators below the slider */
+.dots-container {
+    
+    position: absolute;
+    bottom: 40%;
+    right: 23%;
+
+    margin-top: 20px; /* Space above the dots */
+    display: flex; /* Enables flexbox layout for horizontal alignment */
+    justify-content: center; /* Centers the dots horizontally */
+    align-items: center; /* Centers the dots vertically */
+}
+
+/* Common styling for each individual dot */
+.dot {
+    height: 15px; /* Fixed height for the dots */
+    width: 15px; /* Fixed width for the dots */
+    margin: 0 5px; /* Spacing between the dots */
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white background */
+    border-radius: 50%; /* Makes the dots round */
+    display: inline-block; /* Ensures dots are inline */
+    cursor: pointer; /* Changes cursor to pointer on hover */
+    transition: background-color 0.3s ease; /* Smooth transition for background color on hover */
+}
+
+/* Styling for the active dot - indicates the current slide */
+.dot.active {
+    background-color: rgba(255, 255, 255, 1); /* Solid white background for the active dot */
+}
+
+.column1 {
+    background-color: #f3f3f3;
+    float: right;
+    width: 500px;
+    padding: 10px;
+    height: 400px;
+    border-radius: 20px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.column2 {
+    float: left;
+    width: 500px;
+    padding: 10px;
+    height: 400px;
+    border-radius: 20px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.row:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+.row {
+    margin-top: 80px;
+    padding-left: 250px;
+    padding-right: 250px;
+}
+.paragraph {
+    text-align: center;
+    margin-top: 70px;
+}
+h2{
+    text-align: center;
+    margin-top: 100px;
+  
+}
+.uploadcenter{
+    display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 50px;
+  }
+  p{
+    font-size: 20px;
+
+  }
+.uploadpng{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 20px;
+    
+}
+.scanpng{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 20px;
+    
+}
+.png{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    
+}
+
+/* Hero section positioning */
+.hero2 {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Camera Container */
+#cameraContainer {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(248, 248, 248, 0.95);
+    border-radius: 20px;
+    z-index: 1000;
+}
+
+/* Scan Box */
+.scan-box {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+/* Video Feed */
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 20px;
+}
+
+/* Canvas Overlay */
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+}
+
+/* Close Button */
+#closeCamera {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #6B8333;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 1001;
+    font-weight: bold;
+}
+
+/* Upload Preview Container */
+#uploadPreviewContainer {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(248, 248, 248, 0.95);
+    border-radius: 20px;
+    z-index: 1000;
+}
+
+/* Upload Canvas */
+#uploadCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+}
+
+/* Close Upload Button */
+#closeUpload {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #6B8333;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 1001;
+    font-weight: bold;
+}

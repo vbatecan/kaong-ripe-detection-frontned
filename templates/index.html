@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kripen</title>
+</head>
+<body>
+    <div class="hero">
+        <nav>
+            <img class="kripenlogo" src="/static/image/Logo main vertical.png" alt="Kripen Logo" width="170" height="40">
+            <ul>
+                <li><a href="/">HOME</a></li>
+                <li><a href="/detect">DETECT</a></li>
+                <li><a href="/data">DATA</a></li>
+                <li><a href="#">ABOUT</a></li>
+            </ul>
+            <div>
+                <a href="#" class="btn">Download App</a>
+            </div>
+        </nav>
+
+        <div class="content">
+            <h1 class="anim">Assess ripeness,<br> the smart<br> way</h1>
+            <p class="anim">
+                Discover the smarter way to assess kaong ripeness with the power
+                of Convolutional Neural Networks. Our system ensures precise, reliable, and effortless evaluation for
+                farmers and producers.
+            </p>
+            <br>
+            <a href="#" class="btn anim">Explore</a>
+        </div>
+
+        <div class="background">
+            <div class="slider-container anim">
+                <div class="slider">
+                    <div class="slide"><img src="/static/image/kaong1.jpg" alt="Kaong 1"></div>
+                    <div class="slide"><img src="/static/image/kaong2.jpg" alt="Kaong 2"></div>
+                    <div class="slide"><img src="/static/image/kaong3.jpg" alt="Kaong 3"></div>
+                </div>
+                <button class="prev" onclick="moveSlide(-1)">&#10094;</button>
+                <button class="next" onclick="moveSlide(1)">&#10095;</button>
+            </div>
+            <div class="dots-container anim">
+                <span class="dot" onclick="currentSlide(0)"></span>
+                <span class="dot" onclick="currentSlide(1)"></span>
+                <span class="dot" onclick="currentSlide(2)"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/scriptslide.js"></script>
+</body>
+</html>

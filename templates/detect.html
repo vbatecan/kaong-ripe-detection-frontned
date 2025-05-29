@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kripen</title>
+    <link rel="stylesheet" href="/static/detect.css">
+</head>
+<body>
+    <div class="hero">
+        <nav>
+            <img class="kripenlogo" src="/static/image/Logo main vertical.png" alt="logo" width="170" height="40">
+            <ul>
+                <li><a href="/">HOME</a></li>
+                <li><a href="/detect">DETECT</a></li>
+                <li><a href="/data">DATA</a></li>
+                <li><a href="#">ABOUT</a></li>
+            </ul>
+            <div>
+                <a href="#" class="btn">Download App</a>
+            </div>
+        </nav>
+
+        <p class="paragraph">Start by scanning directly or uploading one from your device to proceed.</p>
+
+        <div class="row anim">
+            <!-- Upload Image Section -->
+            <div class="column1">
+                <p><a href="#" onclick="uploadImage()"> 
+                    <img src="/static/image/Upload.png" class="uploadpng" alt="Upload" height="150px" width="150px">
+                </a></p>
+                <h2>Upload Image</h2>
+                <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                <!-- Upload Preview Container -->
+                <div id="uploadPreviewContainer" style="display: none;">
+                    <button id="closeUpload" onclick="closeUpload()">X</button>
+                    <div class="scan-box">
+                        <canvas id="uploadCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scan Section -->
+            <div class="column2" id="scanContainer">
+                <p><a href="#" onclick="openCamera()"> 
+                    <img src="/static/image/Scan.png" class="scanpng" alt="Scan" height="150px" width="150px">
+                </a></p>
+                <h2>Scan</h2>
+                
+                <!-- Camera Container -->
+                <div id="cameraContainer">
+                    <button id="closeCamera" onclick="closeCamera()">X</button>
+                    <div class="scan-box">
+                        <video id="video" autoplay playsinline></video>
+                        <canvas id="canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kripen - Data History</title>
+    <link rel="stylesheet" href="/static/data.css">
+</head>
+<body>
+    <div class="hero">
+        <nav>
+            <img class="kripenlogo" src="/static/image/Logo main vertical.png" alt="logo" width="170" height="40">
+            <ul>
+                <li><a href="/">HOME</a></li>
+                <li><a href="/detect">DETECT</a></li>
+                <li><a href="/data" class="active">DATA</a></li>
+                <li><a href="#">ABOUT</a></li>
+            </ul>
+            <div>
+                <a href="#" class="btn">Download App</a>
+            </div>
+        </nav>
+
+        <div class="content">
+            <h1>Assessment History</h1>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="ready">Ready for Harvesting</button>
+                <button class="filter-btn" data-filter="not-ready">Not Ready for Harvesting</button>
+                <button class="filter-btn" data-filter="rotten">Rotten</button>
+            </div>
+
+            <div class="data-grid">
+                <!-- Data items will be dynamically added here -->
+            </div>
+
+            <div class="statistics">
+                <div class="stat-box">
+                    <h3>Total Scanned</h3>
+                    <p id="totalScanned">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Ready for Harvesting</h3>
+                    <p id="readyCount">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Not Ready</h3>
+                    <p id="notReadyCount">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Rotten</h3>
+                    <p id="rottenCount">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template for data items -->
+    <template id="data-item-template">
+        <div class="data-item">
+            <div class="image-container">
+                <img src="" alt="Kaong Image">
+                <div class="assessment-label"></div>
+            </div>
+            <div class="item-details">
+                <p class="timestamp"></p>
+                <p class="confidence"></p>
+                <p class="source"></p>
+            </div>
+        </div>
+    </template>
+
+    <script src="/static/data.js"></script>
+</body>
+</html> 
