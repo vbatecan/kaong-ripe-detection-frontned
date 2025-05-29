@@ -13,6 +13,7 @@ socketio = SocketIO(app)
 
 # --- Configuration ---
 INFERENCE_DEVICE = "cuda"  # Options: "cpu", "cuda", "cuda:0", "mps", etc.
+CONFIDENCE_THRESHOLD = 0.7 # Adjustable confidence threshold for detections
 # -------------------
 
 # Create directories for storing data
@@ -32,7 +33,6 @@ else:
 # User: 1. Unripe, 2. Rotten, 3. Ripe
 # Assuming 0-indexed model output:
 KAONG_LABELS_MAP = {2: "Unripe", 1: "Rotten", 0: "Ripe"}
-
 
 def get_kaong_label(label_id):
     """Maps a numeric label_id to a string representation."""
@@ -97,7 +97,7 @@ def detect_frame():
             if conf_scores:
                 for i in range(len(conf_scores)):
                     score = conf_scores[i]
-                    if score > 0.3:
+                    if score > CONFIDENCE_THRESHOLD:
                         label_id = class_indices[i]
                         label_name = get_kaong_label(label_id)
                         box_coords = boxes_xyxy[i]
@@ -124,7 +124,7 @@ def detect_frame():
                 {
                     "label": "Not Ready for Harvesting",
                     "box": default_box,
-                    "score": 0.5,
+                    "score": 0.0,
                 }
             )
 
@@ -148,9 +148,16 @@ def detect_frame():
                             (image_url, assessment, confidence, source, timestamp) 
                             VALUES (%s, %s, %s, %s, %s)"""
                     first_detection = final_detections[0]
+                    if first_detection["label"] == "Ripe":
+                        assessment = "Ready for Harvesting"
+                    elif first_detection["label"] == "Unripe":
+                        assessment = "Not Ready for Harvesting"
+                    else:
+                        assessment = "Rotten"
+                    
                     values = (
                         f"/static/uploads/{filename}",
-                        first_detection["label"],
+                        assessment,
                         first_detection["score"],
                         "upload",  # Source is 'upload'
                         timestamp_val,
@@ -191,10 +198,7 @@ def handle_video_frame(data):
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
 
         # Perform detection using Ultralytics YOLO model
-        # model.cpu() # Ensure model is on CPU
-        results = model.predict(
-            source=image, verbose=False, conf=0.3, device=INFERENCE_DEVICE
-        )  # Added conf here
+        results = model.predict(source=image, verbose=False, device=INFERENCE_DEVICE)
 
         final_detections = []
         img_width, img_height = image.size
@@ -210,17 +214,18 @@ def handle_video_frame(data):
             processed_detections = []
             if conf_scores:
                 for i in range(len(conf_scores)):
-                    # score = conf_scores[i] # Already filtered by conf=0.3 in predict
-                    label_id = class_indices[i]
-                    label_name = get_kaong_label(label_id)
-                    box_coords = boxes_xyxy[i]
-                    processed_detections.append(
-                        {
-                            "label": label_name,
-                            "box": box_coords,
-                            "score": conf_scores[i],  # Use the actual score
-                        }
-                    )
+                    score = conf_scores[i]
+                    if score > CONFIDENCE_THRESHOLD:
+                        label_id = class_indices[i]
+                        label_name = get_kaong_label(label_id)
+                        box_coords = boxes_xyxy[i]
+                        processed_detections.append(
+                            {
+                                "label": label_name,
+                                "box": box_coords,
+                                "score": score,
+                            }
+                        )
 
             if processed_detections:
                 final_detections = processed_detections
@@ -233,7 +238,7 @@ def handle_video_frame(data):
                 img_height * 0.9,
             ]
             final_detections.append(
-                {"label": "Not Ready for Harvesting", "box": default_box, "score": 0.5}
+                {"label": "Not Ready for Harvesting", "box": default_box, "score": 0.0}
             )
 
         # Save assessment for the first (or default) detection
@@ -261,9 +266,16 @@ def handle_video_frame(data):
                             VALUES (%s, %s, %s, %s, %s)"""
                     # Use the first detection for saving, similar to how it was in fetch
                     first_detection = final_detections[0]
+                    if first_detection["label"] == "Ripe":
+                        assessment = "Ready for Harvesting"
+                    elif first_detection["label"] == "Unripe":
+                        assessment = "Not Ready for Harvesting"
+                    else:
+                        assessment = "Rotten"
+                    
                     values = (
                         f"/static/uploads/{filename}",
-                        first_detection["label"],
+                        assessment,
                         first_detection["score"],
                         "camera_ws",  # Indicate source as camera via WebSocket
                         datetime.now(),
