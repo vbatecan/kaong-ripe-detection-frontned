@@ -21,6 +21,19 @@ if os.path.exists("model.pt"):
 else:
     model = ultralytics.YOLO("yolo11n.pt")
 
+# Define the label mapping based on user input
+# User: 1. Unripe, 2. Rotten, 3. Ripe
+# Assuming 0-indexed model output:
+KAONG_LABELS_MAP = {
+    0: "Unripe",
+    1: "Rotten",
+    2: "Ripe"
+}
+
+def get_kaong_label(label_id):
+    """Maps a numeric label_id to a string representation."""
+    return KAONG_LABELS_MAP.get(int(label_id), "Unknown")
+
 
 @app.route("/")
 def index():
@@ -56,77 +69,71 @@ def detect_frame():
         # Print image info for debugging
         print(f"Image size: {image.size}, Mode: {image.mode}")
 
-        # Transform the image
-        image_tensor = transform(image)
-        print(f"Tensor shape: {image_tensor.shape}")
-
-        # Add batch dimension
-        image_tensor = [image_tensor]
-
-        # Move model to CPU explicitly
+        # Move model to CPU explicitly (if needed, ultralytics handles device placement)
         model.cpu()
 
-        with torch.no_grad():
-            predictions = model(image_tensor)
+        # Perform detection using Ultralytics YOLO model
+        results = model.predict(source=image, verbose=False)
+
+        final_detections = []
+        img_width, img_height = image.size
+
+        if results and len(results) > 0:
+            result = results[0]  # Ultralytics results object for the first image
+            
+            boxes_xyxy = result.boxes.xyxy.tolist() if result.boxes is not None else []
+            conf_scores = result.boxes.conf.tolist() if result.boxes is not None else []
+            class_indices = result.boxes.cls.tolist() if result.boxes is not None else []
 
             # Print raw predictions for debugging
             print(
-                "Raw predictions:",
+                "Raw predictions (Ultralytics):",
                 {
-                    "boxes": (
-                        predictions[0]["boxes"].shape
-                        if len(predictions[0]["boxes"]) > 0
-                        else "no boxes"
-                    ),
-                    "labels": (
-                        predictions[0]["labels"].shape
-                        if len(predictions[0]["labels"]) > 0
-                        else "no labels"
-                    ),
-                    "scores": (
-                        predictions[0]["scores"].shape
-                        if len(predictions[0]["scores"]) > 0
-                        else "no scores"
-                    ),
+                    "num_boxes": len(boxes_xyxy),
+                    "num_scores": len(conf_scores),
+                    "num_class_ids": len(class_indices),
                 },
             )
+            
+            processed_detections = []
+            if conf_scores: # Check if there are any detections
+                for i in range(len(conf_scores)):
+                    score = conf_scores[i]
+                    if score > 0.3: # Confidence threshold
+                        label_id = class_indices[i]
+                        label_name = get_kaong_label(label_id) 
+                        box_coords = boxes_xyxy[i]
+                        processed_detections.append({
+                            "label": label_name,
+                            "box": box_coords,
+                            "score": score
+                        })
+            
+            if processed_detections:
+                final_detections = processed_detections
+            # If processed_detections is empty, final_detections remains empty,
+            # and the default logic below will be triggered.
+        else:
+            print("Model prediction did not return any results.")
+            # Default logic will be triggered as final_detections is empty.
 
-        # Get the image dimensions for default box
-        img_width, img_height = image.size
-
-        # If no detections with high confidence, provide a default detection
-        if (
-            len(predictions[0]["scores"]) == 0
-            or predictions[0]["scores"][0].item() < 0.3
-        ):
-            print("No high confidence detections found, using default detection")
-            # Create a default detection covering most of the image
+        # If no valid detections were made, provide a default detection
+        if not final_detections:
+            print("No high confidence detections found or model returned no results, using default detection")
             default_box = [
                 img_width * 0.1,  # x1 - 10% from left
                 img_height * 0.1,  # y1 - 10% from top
                 img_width * 0.9,  # x2 - 90% from left
                 img_height * 0.9,  # y2 - 90% from top
             ]
-            # For now, we'll assume "Not Ready for Harvesting" as default
-            detections = [
-                {
-                    "label": "Not Ready for Harvesting",
-                    "box": default_box,
-                    "score": 0.5,  # Medium confidence for default detection
-                }
-            ]
-        else:
-            detections = []
-            for i in range(len(predictions[0]["scores"])):
-                score = predictions[0]["scores"][i].item()
-                if score > 0.3:
-                    label_id = predictions[0]["labels"][i].item()
-                    label = get_kaong_label(label_id)
-                    box = predictions[0]["boxes"][i].tolist()
-                    detections.append({"label": label, "box": box, "score": score})
+            final_detections.append({
+                "label": "Not Ready for Harvesting", # Specific default label
+                "box": default_box,
+                "score": 0.5,  # Medium confidence for default detection
+            })
 
-        print(f"Returning {len(detections)} detections")
-        return jsonify({"detections": detections})
+        print(f"Returning {len(final_detections)} detections: {final_detections}")
+        return jsonify({"detections": final_detections})
 
     except Exception as e:
         import traceback

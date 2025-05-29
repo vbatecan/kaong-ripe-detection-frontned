@@ -6,7 +6,8 @@ def get_db_connection(use_database=True):
         connection_params = {
             'host': 'localhost',
             'user': 'root',
-            'password': ''  # Default XAMPP password is empty
+            'password': '1234',
+            'port': 33306
         }
         
         if use_database:
