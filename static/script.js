@@ -2,6 +2,7 @@
 let videoStream;
 let detectionInterval;
 let cameraStarted = false;
+let socket; // Added for WebSocket
 
 function openCamera() {
     const cameraContainer = document.getElementById('cameraContainer');
@@ -17,6 +18,40 @@ function openCamera() {
 
     // Show camera container
     cameraContainer.style.display = "block";
+
+    // Initialize Socket.IO connection
+    socket = io(); // Connects to the server that served the page
+
+    socket.on('connect', () => {
+        console.log('Connected to WebSocket server');
+        cameraStarted = true; // Set cameraStarted to true only after connection
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from WebSocket server');
+        cameraStarted = false;
+    });
+
+    socket.on('detection_results', (data) => {
+        // console.log('Detections received:', data);
+        if (data.detections && data.detections.length > 0) {
+            drawDetections(data); 
+            // Assessment saving is now handled by the backend for WebSocket stream
+        } else {
+            // console.log("No detections in data or detections array is empty.");
+            // Optionally, clear previous detections if server sends empty results for no detections
+             const canvas = document.getElementById('canvas');
+             const ctx = canvas.getContext('2d');
+             const video = document.getElementById('video');
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Redraw video frame
+        }
+    });
+
+    socket.on('detection_error', (data) => {
+        console.error("Detection error from server:", data.error);
+        // Optionally, display this error to the user
+    });
 
     // Get user media with constraints
     navigator.mediaDevices.getUserMedia({ 
@@ -71,10 +106,18 @@ function closeCamera() {
         videoStream = null;
     }
     
+    if (socket && socket.connected) { // Disconnect WebSocket
+        socket.disconnect();
+        socket = null;
+        console.log("WebSocket disconnected by client.");
+    }
+    
     // Hide both video and canvas
     cameraContainer.style.display = "none";
     canvas.style.display = 'none';
     clearInterval(detectionInterval);
+    detectionInterval = null; // Clear interval ID
+    cameraStarted = false; // Explicitly set to false
 }
 
 function uploadImage() {
@@ -111,34 +154,34 @@ async function saveAssessment(imageBlob, detection, source) {
     }
 }
 
-// Update the captureFrame function
-async function captureFrame() {
+// Update the captureFrame function for WebSocket
+async function captureFrameAndSend() {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // Draw the video frame to the canvas
+    if (video.readyState === video.HAVE_ENOUGH_DATA && socket && socket.connected && cameraStarted) {
+        // Draw the video frame to a temporary canvas to get data URL
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        const imageDataURL = tempCanvas.toDataURL('image/jpeg', 0.8); // Use JPEG and quality 0.8
+
+        // Send frame via WebSocket
+        socket.emit('detect_video_frame', { image_data_url: imageDataURL });
+        
+        // The drawing of detections will happen when 'detection_results' is received.
+        // So, we draw the current video frame here to keep the video feed live.
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(async (blob) => {
-            let formData = new FormData();
-            formData.append('image', blob, 'frame.jpg');
-
-            try {
-                let response = await fetch('/detect_frame', { method: 'POST', body: formData });
-                let result = await response.json();
-                if (response.ok && result.detections && result.detections.length > 0) {
-                    drawDetections(result);
-                    // Save the assessment data
-                    await saveAssessment(blob, result.detections[0], 'camera');
-                } else {
-                    console.error("Detection failed:", result.error);
-                }
-            } catch (error) {
-                console.error("Error sending frame:", error);
-            }
-        }, 'image/jpeg');
+    } else if (!cameraStarted && detectionInterval) {
+        console.log("Camera not fully started or socket not connected, stopping detection interval.");
+        clearInterval(detectionInterval);
+        detectionInterval = null;
     }
 }
 
@@ -161,7 +204,7 @@ function drawDetections(result) {
         result.detections.forEach(detection => {
             const [x1, y1, x2, y2] = detection.box;
             ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-            ctx.fillText(`${detection.label} (${(detection.score * 100).toFixed(1)}%)`, x1, y1 - 5);
+            // ctx.fillText(`${detection.label} (${(detection.score * 100).toFixed(1)}%)`, x1, y1 - 5);
         });
     }
 }
@@ -254,8 +297,16 @@ document.getElementById('imageUpload').addEventListener('change', async function
                 // Draw detections
                 if (result.detections && result.detections.length > 0) {
                     ctx.lineWidth = 3;
-                    ctx.strokeStyle = "red";
-                    ctx.fillStyle = "red";
+                    if (result.detections[0].label == "Unripe") {
+                        ctx.strokeStyle = "green";
+                        ctx.fillStyle = "green";
+                    } else if (result.detections[0].label == "Rotten") {
+                        ctx.strokeStyle = "blue";
+                        ctx.fillStyle = "blue";
+                    } else if (result.detections[0].label == "Ripe") {
+                        ctx.strokeStyle = "yellow";
+                        ctx.fillStyle = "yellow";
+                    }
                     ctx.font = "18px Arial";
                     
                     result.detections.forEach(detection => {
@@ -279,16 +330,14 @@ document.getElementById('imageUpload').addEventListener('change', async function
                         const textWidth = ctx.measureText(label).width;
                         
                         // Draw label background
-                        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                        ctx.fillRect(boxX, labelY - 20, textWidth + 10, 25);
+                        // TODO: REDO
+                        // ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                        // ctx.fillRect(boxX, labelY - 20, textWidth + 10, 25);
                         
                         // Draw text
                         ctx.fillStyle = "red";
-                        ctx.fillText(label, boxX + 5, labelY);
+                        // ctx.fillText(label, boxX + 5, labelY);
                     });
-                    
-                    // Save the assessment data
-                    await saveAssessment(file, result.detections[0], 'upload');
                 }
                 
                 // Clean up resources after successful processing
@@ -320,7 +369,11 @@ document.getElementById('imageUpload').addEventListener('change', async function
 });
 
 function startRealTimeDetection() {
-    detectionInterval = setInterval(captureFrame, 500);
+    if (detectionInterval) {
+        clearInterval(detectionInterval); // Clear any existing interval
+    }
+    // Call captureFrameAndSend instead of captureFrame
+    detectionInterval = setInterval(captureFrameAndSend, 200); 
 }
 
 document.addEventListener('DOMContentLoaded', () => {
