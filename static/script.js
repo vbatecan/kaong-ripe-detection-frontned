@@ -195,7 +195,7 @@ function drawDetections(result) {
     // Redraw the video frame
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.font = "18px Arial";
     ctx.strokeStyle = "red";
     ctx.fillStyle = "red";
@@ -296,7 +296,7 @@ document.getElementById('imageUpload').addEventListener('change', async function
                 
                 // Draw detections
                 if (result.detections && result.detections.length > 0) {
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 2;
                     if (result.detections[0].label == "Unripe") {
                         ctx.strokeStyle = "green";
                         ctx.fillStyle = "green";

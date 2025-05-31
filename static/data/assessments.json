@@ -250,5 +250,12 @@
     "confidence": 0.909446120262146,
     "source": "camera",
     "timestamp": "2025-05-15T09:40:13.908506"
+  },
+  {
+    "image_url": "/static/uploads/kaong_upload_20250529_110520_319385.jpg",
+    "assessment": "Ready for Harvesting",
+    "confidence": 0.9475250840187073,
+    "source": "upload",
+    "timestamp": "2025-05-29T11:05:20.319385"
   }
 ]

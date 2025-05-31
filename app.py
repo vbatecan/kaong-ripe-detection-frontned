@@ -11,10 +11,9 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"  # Important for SocketIO
 socketio = SocketIO(app)
 
-# --- Configuration ---
-INFERENCE_DEVICE = "cuda"  # Options: "cpu", "cuda", "cuda:0", "mps", etc.
-CONFIDENCE_THRESHOLD = 0.7 # Adjustable confidence threshold for detections
-# -------------------
+INFERENCE_DEVICE = "cuda"
+CONFIDENCE_THRESHOLD = 0.7
+DATABASE_SAVE_CONFIDENCE_LEVEL = 0.8
 
 # Create directories for storing data
 UPLOAD_FOLDER = "static/uploads"
@@ -65,7 +64,7 @@ def detect_frame():
             return jsonify({"error": "No selected file"}), 400
 
         print(f"Received file: {file.filename}, Content type: {file.content_type}")
-        image_pil = Image.open(file.stream).convert("RGB")  # Use file.stream for PIL
+        image_pil = Image.open(file.stream).convert("RGB")
         print(f"Image size: {image_pil.size}, Mode: {image_pil.mode}")
 
         results = model.predict(
@@ -82,8 +81,6 @@ def detect_frame():
             class_indices = (
                 result.boxes.cls.tolist() if result.boxes is not None else []
             )
-            print(result.names)
-
             print(
                 "Raw predictions (Ultralytics):",
                 {
@@ -129,7 +126,7 @@ def detect_frame():
             )
 
         # Save assessment for the first (or default) detection from uploaded image
-        if final_detections:
+        if final_detections and final_detections[0]["score"] > CONFIDENCE_THRESHOLD:
             timestamp_val = datetime.now()
             # Generate unique filename using timestamp
             filename = f"kaong_upload_{timestamp_val.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
@@ -229,7 +226,8 @@ def handle_video_frame(data):
 
             if processed_detections:
                 final_detections = processed_detections
-
+                
+        # * If no detection is found, then set default detection.
         if not final_detections:
             default_box = [
                 img_width * 0.1,
@@ -240,11 +238,10 @@ def handle_video_frame(data):
             final_detections.append(
                 {"label": "Not Ready for Harvesting", "box": default_box, "score": 0.0}
             )
+            return # ! This will prevent the data being appended to the database if none is detected.
 
         # Save assessment for the first (or default) detection
-        if final_detections:
-            # To save the image, we need to write the bytes to a file temporarily
-            # or modify save_assessment logic if it can take bytes directly.
+        if final_detections and final_detections[0]["score"] < DATABASE_SAVE_CONFIDENCE_LEVEL:
             # For simplicity, let's make a unique filename for the frame
             timestamp = datetime.now().strftime(
                 "%Y%m%d_%H%M%S_%f"
@@ -252,11 +249,9 @@ def handle_video_frame(data):
             filename = f"kaong_frame_{timestamp}.jpg"
             filepath = os.path.join(UPLOAD_FOLDER, filename)
 
-            # Save the image from bytes
             with open(filepath, "wb") as f_img:
                 f_img.write(image_bytes)
 
-            # Save to database
             connection = get_db_connection()
             if connection:
                 try:
