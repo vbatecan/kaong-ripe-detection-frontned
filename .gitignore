@@ -7,3 +7,7 @@ __pycache__
 *.pyz
 
 static/uploads/*
+.idea
+.venv
+*.zip
+__pycache__
