@@ -1,41 +1,51 @@
-from flask import Flask, render_template, request, jsonify
-from flask_socketio import SocketIO, emit
-from PIL import Image
-import os
+"""
+Optimized Flask application for Kaong fruit ripeness detection.
+Uses service-oriented architecture for better maintainability and performance.
+"""
+import logging
+from typing import Dict, Any
 from datetime import datetime
 
-import ultralytics
-from db_config import get_db_connection, init_db
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
 
+from config import FLASK_CONFIG, LOGGING_CONFIG, DATABASE_SAVE_CONFIDENCE_LEVEL, CONFIDENCE_THRESHOLD, ensure_directories
+from services.detection_service import DetectionService
+from services.database_service import DatabaseService, Assessment
+from services.image_service import ImageService, ImageValidationError
+from db_config import init_db
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, LOGGING_CONFIG['level']),
+    format=LOGGING_CONFIG['format'],
+    filename=LOGGING_CONFIG['filename'] if LOGGING_CONFIG['filename'] else None
+)
+logger = logging.getLogger(__name__)
+
+# Ensure necessary directories exist
+ensure_directories()
+
+# Initialize Flask app
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "your_secret_key"  # Important for SocketIO
+app.config["SECRET_KEY"] = FLASK_CONFIG['SECRET_KEY']
 socketio = SocketIO(app)
 
-INFERENCE_DEVICE = "cuda"
-CONFIDENCE_THRESHOLD = 0.7
-DATABASE_SAVE_CONFIDENCE_LEVEL = 0.8
-
-# Create directories for storing data
-UPLOAD_FOLDER = "static/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Initialize database
-init_db()
-
-# Initialize Model
-if os.path.exists("best.pt"):
-    model = ultralytics.YOLO("best.pt")
-else:
-    model = ultralytics.YOLO("yolo11n.pt")
-
-# Define the label mapping based on user input
-# User: 1. Unripe, 2. Rotten, 3. Ripe
-# Assuming 0-indexed model output:
-KAONG_LABELS_MAP = {2: "Unripe", 1: "Rotten", 0: "Ripe"}
-
-def get_kaong_label(label_id):
-    """Maps a numeric label_id to a string representation."""
-    return KAONG_LABELS_MAP.get(int(label_id), "Unknown")
+# Initialize services
+try:
+    detection_service = DetectionService()
+    database_service = DatabaseService()
+    image_service = ImageService()
+    
+    # Initialize database tables
+    init_db()
+    database_service.create_tables()
+    
+    logger.info("Application services initialized successfully")
+    
+except Exception as e:
+    logger.error(f"Failed to initialize services: {str(e)}")
+    raise RuntimeError(f"Service initialization failed: {str(e)}")
 
 
 @app.route("/")
@@ -53,329 +63,298 @@ def data():
     return render_template("data.html")
 
 
+# noinspection D
 @app.route("/detect_frame", methods=["POST"])
-def detect_frame():
+def detect_frame() -> Dict[str, Any]:
+    """
+    Handle image upload and detection for static image analysis.
+    
+    Returns:
+        JSON response with detection results or error message
+    """
     try:
+        # Validate request
         if "image" not in request.files:
+            logger.warning("No image file provided in request")
             return jsonify({"error": "No image file provided"}), 400
 
         file = request.files["image"]
-        if file.filename == "":
+        if not file or file.filename == "":
+            logger.warning("Empty filename in request")
             return jsonify({"error": "No selected file"}), 400
 
-        print(f"Received file: {file.filename}, Content type: {file.content_type}")
-        image_pil = Image.open(file.stream).convert("RGB")
-        print(f"Image size: {image_pil.size}, Mode: {image_pil.mode}")
+        logger.info(f"Processing upload: {file.filename}, type: {file.content_type}")
 
-        results = model.predict(
-            source=image_pil, verbose=False, device=INFERENCE_DEVICE
-        )
+        # Validate and process image
+        try:
+            image, original_filename = image_service.validate_and_process_upload(file)
+        except ImageValidationError as e:
+            logger.error(f"Image validation failed: {str(e)}")
+            return jsonify({"error": str(e)}), 400
 
-        final_detections = []
-        img_width, img_height = image_pil.size
+        # Perform detection
+        detections, has_valid_detections = detection_service.detect_objects(image)
 
-        if results and len(results) > 0:
-            result = results[0]
-            boxes_xyxy = result.boxes.xyxy.tolist() if result.boxes is not None else []
-            conf_scores = result.boxes.conf.tolist() if result.boxes is not None else []
-            class_indices = (
-                result.boxes.cls.tolist() if result.boxes is not None else []
+        # Save assessment if we have valid detections
+        if has_valid_detections and detections:
+            first_detection = detections[0]
+            
+            # Save image
+            filename = image_service.save_image(image, prefix="kaong", source="upload")
+            
+            # Create assessment record
+            assessment = Assessment(
+                image_url=image_service.get_image_url(filename),
+                assessment=first_detection.assessment,
+                confidence=first_detection.score,
+                source="upload",
+                timestamp=datetime.now()
             )
-            print(
-                "Raw predictions (Ultralytics):",
-                {
-                    "num_boxes": len(boxes_xyxy),
-                    "num_scores": len(conf_scores),
-                    "num_class_ids": len(class_indices),
-                },
-            )
-
-            processed_detections = []
-            if conf_scores:
-                for i in range(len(conf_scores)):
-                    score = conf_scores[i]
-                    if score > CONFIDENCE_THRESHOLD:
-                        label_id = class_indices[i]
-                        label_name = get_kaong_label(label_id)
-                        box_coords = boxes_xyxy[i]
-                        processed_detections.append(
-                            {"label": label_name, "box": box_coords, "score": score}
-                        )
-
-            if processed_detections:
-                final_detections = processed_detections
-        else:
-            print("Model prediction did not return any results.")
-
-        if not final_detections:
-            print(
-                "No high confidence detections found or model returned no results, using default detection"
-            )
-            default_box = [
-                img_width * 0.1,
-                img_height * 0.1,
-                img_width * 0.9,
-                img_height * 0.9,
-            ]
-            final_detections.append(
-                {
-                    "label": "Not Ready for Harvesting",
-                    "box": default_box,
-                    "score": 0.0,
-                }
-            )
-
-        # Save assessment for the first (or default) detection from uploaded image
-        if final_detections and final_detections[0]["score"] > CONFIDENCE_THRESHOLD:
-            timestamp_val = datetime.now()
-            # Generate unique filename using timestamp
-            filename = f"kaong_upload_{timestamp_val.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-
-            # Save the PIL image object
-            image_pil.save(filepath)
-            print(f"Uploaded image saved to {filepath}")
-
+            
             # Save to database
-            connection = get_db_connection()
-            if connection:
-                try:
-                    cursor = connection.cursor()
-                    sql = """INSERT INTO assessments 
-                            (image_url, assessment, confidence, source, timestamp) 
-                            VALUES (%s, %s, %s, %s, %s)"""
-                    first_detection = final_detections[0]
-                    if first_detection["label"] == "Ripe":
-                        assessment = "Ready for Harvesting"
-                    elif first_detection["label"] == "Unripe":
-                        assessment = "Not Ready for Harvesting"
-                    else:
-                        assessment = "Rotten"
-                    
-                    values = (
-                        f"/static/uploads/{filename}",
-                        assessment,
-                        first_detection["score"],
-                        "upload",  # Source is 'upload'
-                        timestamp_val,
-                    )
-                    cursor.execute(sql, values)
-                    connection.commit()
-                    print(f"Saved assessment from uploaded image: {filename}")
-                except Exception as db_e:
-                    print(f"DB Error in /detect_frame for upload: {db_e}")
-                finally:
-                    if connection.is_connected():
-                        cursor.close()
-                        connection.close()
+            assessment_id = database_service.save_assessment(assessment)
+            if assessment_id:
+                logger.info(f"Saved assessment {assessment_id} for upload: {filename}")
             else:
-                print("DB connection failed in /detect_frame for upload")
+                logger.error("Failed to save assessment to database")
 
-        print(f"Returning {len(final_detections)} detections: {final_detections}")
-        return jsonify({"detections": final_detections})
+        # Prepare response
+        detections_dict = [detection.to_dict() for detection in detections]
+        logger.info(f"Returning {len(detections_dict)} detections")
+        
+        return jsonify({"detections": detections_dict})
 
     except Exception as e:
-        import traceback
-
-        print("Error in detect_frame:", str(e))
-        print("Traceback:", traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Unexpected error in detect_frame: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error occurred"}), 500
 
 
 @socketio.on("detect_video_frame")
-def handle_video_frame(data):
+def handle_video_frame(data: Dict[str, Any]) -> None:
+    """
+    Handle real-time video frame detection via WebSocket.
+    
+    Args:
+        data: Dictionary containing 'image_data_url' key with base64 image data
+    """
     try:
-        image_data = data["image_data_url"].split(",")[1]  # Get base64 part
-        import base64
+        if "image_data_url" not in data:
+            logger.error("No image_data_url provided in WebSocket data")
+            emit("detection_error", {"error": "No image data provided"})
+            return
 
-        image_bytes = base64.b64decode(image_data)
+        try:
+            image = image_service.process_base64_image(data["image_data_url"])
+        except ImageValidationError as e:
+            logger.error(f"Base64 image processing failed: {str(e)}")
+            emit("detection_error", {"error": str(e)})
+            return
 
-        from io import BytesIO
+        detections, has_valid_detections = detection_service.detect_objects(image)
 
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-
-        # Perform detection using Ultralytics YOLO model
-        results = model.predict(source=image, verbose=False, device=INFERENCE_DEVICE)
-
-        final_detections = []
-        img_width, img_height = image.size
-
-        if results and len(results) > 0:
-            result = results[0]
-            boxes_xyxy = result.boxes.xyxy.tolist() if result.boxes is not None else []
-            conf_scores = result.boxes.conf.tolist() if result.boxes is not None else []
-            class_indices = (
-                result.boxes.cls.tolist() if result.boxes is not None else []
+        if has_valid_detections and detections:
+            first_detection = detections[0]
+            
+            import base64
+            image_data = data["image_data_url"].split(",")[1]
+            image_bytes = base64.b64decode(image_data)
+            filename = image_service.save_raw_image_data(image_bytes, prefix="kaong", source="camera")
+            
+            # Create assessment record
+            assessment = Assessment(
+                image_url=image_service.get_image_url(filename),
+                assessment=first_detection.assessment,
+                confidence=first_detection.score,
+                source="camera_ws",
+                timestamp=datetime.now()
             )
-
-            processed_detections = []
-            if conf_scores:
-                for i in range(len(conf_scores)):
-                    score = conf_scores[i]
-                    if score > CONFIDENCE_THRESHOLD:
-                        label_id = class_indices[i]
-                        label_name = get_kaong_label(label_id)
-                        box_coords = boxes_xyxy[i]
-                        processed_detections.append(
-                            {
-                                "label": label_name,
-                                "box": box_coords,
-                                "score": score,
-                            }
-                        )
-
-            if processed_detections:
-                final_detections = processed_detections
-                
-        # * If no detection is found, then set default detection.
-        if not final_detections:
-            default_box = [
-                img_width * 0.1,
-                img_height * 0.1,
-                img_width * 0.9,
-                img_height * 0.9,
-            ]
-            final_detections.append(
-                {"label": "Not Ready for Harvesting", "box": default_box, "score": 0.0}
-            )
-            return # ! This will prevent the data being appended to the database if none is detected.
-
-        # Save assessment for the first (or default) detection
-        if final_detections and final_detections[0]["score"] < DATABASE_SAVE_CONFIDENCE_LEVEL:
-            # For simplicity, let's make a unique filename for the frame
-            timestamp = datetime.now().strftime(
-                "%Y%m%d_%H%M%S_%f"
-            )  # Added microseconds for uniqueness
-            filename = f"kaong_frame_{timestamp}.jpg"
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-
-            with open(filepath, "wb") as f_img:
-                f_img.write(image_bytes)
-
-            connection = get_db_connection()
-            if connection:
-                try:
-                    cursor = connection.cursor()
-                    sql = """INSERT INTO assessments 
-                            (image_url, assessment, confidence, source, timestamp) 
-                            VALUES (%s, %s, %s, %s, %s)"""
-                    # Use the first detection for saving, similar to how it was in fetch
-                    first_detection = final_detections[0]
-                    if first_detection["label"] == "Ripe":
-                        assessment = "Ready for Harvesting"
-                    elif first_detection["label"] == "Unripe":
-                        assessment = "Not Ready for Harvesting"
-                    else:
-                        assessment = "Rotten"
-                    
-                    values = (
-                        f"/static/uploads/{filename}",
-                        assessment,
-                        first_detection["score"],
-                        "camera_ws",  # Indicate source as camera via WebSocket
-                        datetime.now(),
-                    )
-                    cursor.execute(sql, values)
-                    connection.commit()
-                    print(f"Saved assessment from WebSocket: {filename}")
-                except Exception as db_e:
-                    print(f"DB Error in WebSocket handler: {db_e}")
-                finally:
-                    if connection.is_connected():
-                        cursor.close()
-                        connection.close()
+            
+            # Save to database
+            assessment_id = database_service.save_assessment(assessment)
+            if assessment_id:
+                logger.debug(f"Saved WebSocket assessment {assessment_id}: {filename}")
             else:
-                print("DB connection failed in WebSocket handler")
+                logger.error("Failed to save WebSocket assessment to database")
 
-        emit("detection_results", {"detections": final_detections})
-
+        # Emit results to client
+        detections_dict = [detection.to_dict() for detection in detections]
+        emit("detection_results", {"detections": detections_dict})
+        
+        logger.debug(f"WebSocket detection complete: {len(detections_dict)} objects")
     except Exception as e:
-        import traceback
-
-        print(f"Error in handle_video_frame: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
-        # Optionally emit an error back to the client
-        emit("detection_error", {"error": str(e)})
+        logger.error(f"Unexpected error in handle_video_frame: {str(e)}", exc_info=True)
+        emit("detection_error", {"error": "Internal server error occurred"})
 
 
 @app.route("/save_assessment", methods=["POST"])
-def save_assessment():
+def save_assessment() -> Dict[str, Any]:
+    """
+    Save a manual assessment with uploaded image.
+    
+    Returns:
+        JSON response indicating success or failure
+    """
     try:
+        # Validate required form data
+        required_fields = ["assessment", "confidence", "source"]
+        for field in required_fields:
+            if field not in request.form:
+                logger.warning(f"Missing required field: {field}")
+                return jsonify({"success": False, "error": f"Missing {field}"}), 400
+
+        # Validate file upload
+        if "image" not in request.files:
+            logger.warning("No image file in save_assessment request")
+            return jsonify({"success": False, "error": "No image file provided"}), 400
+
         file = request.files["image"]
-        assessment = request.form["assessment"]
-        confidence = float(request.form["confidence"])
-        source = request.form["source"]
+        if not file or file.filename == "":
+            logger.warning("Empty filename in save_assessment request")
+            return jsonify({"success": False, "error": "No selected file"}), 400
 
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"kaong_{timestamp}.jpg"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        # Validate and process image
+        try:
+            image, original_filename = image_service.validate_and_process_upload(file)
+        except ImageValidationError as e:
+            logger.error(f"Image validation failed in save_assessment: {str(e)}")
+            return jsonify({"success": False, "error": str(e)}), 400
 
-        # Save the image
-        image = Image.open(file)
-        image.save(filepath)
+        # Parse form data
+        try:
+            assessment_text = request.form["assessment"]
+            confidence = float(request.form["confidence"])
+            source = request.form["source"]
+        except (ValueError, KeyError) as e:
+            logger.error(f"Invalid form data in save_assessment: {str(e)}")
+            return jsonify({"success": False, "error": "Invalid form data"}), 400
 
+        # Save image
+        filename = image_service.save_image(image, prefix="kaong", source="manual")
+        
+        # Create assessment record
+        assessment = Assessment(
+            image_url=image_service.get_image_url(filename),
+            assessment=assessment_text,
+            confidence=confidence,
+            source=source,
+            timestamp=datetime.now()
+        )
+        
         # Save to database
-        connection = get_db_connection()
-        if connection:
-            try:
-                cursor = connection.cursor()
-                sql = """INSERT INTO assessments 
-                        (image_url, assessment, confidence, source, timestamp) 
-                        VALUES (%s, %s, %s, %s, %s)"""
-                values = (
-                    f"/static/uploads/{filename}",
-                    assessment,
-                    confidence,
-                    source,
-                    datetime.now(),
-                )
-                cursor.execute(sql, values)
-                connection.commit()
-                return jsonify({"success": True})
-            except Exception as e:
-                return jsonify({"success": False, "error": str(e)}), 500
-            finally:
-                if connection.is_connected():
-                    cursor.close()
-                    connection.close()
+        assessment_id = database_service.save_assessment(assessment)
+        if assessment_id:
+            logger.info(f"Manual assessment saved with ID: {assessment_id}")
+            return jsonify({"success": True, "assessment_id": assessment_id})
         else:
-            return (
-                jsonify({"success": False, "error": "Database connection failed"}),
-                500,
-            )
+            logger.error("Failed to save manual assessment to database")
+            return jsonify({"success": False, "error": "Database save failed"}), 500
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error(f"Unexpected error in save_assessment: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "error": "Internal server error"}), 500
 
 
 @app.route("/get_assessment_data")
-def get_assessment_data():
+def get_assessment_data() -> Dict[str, Any]:
+    """
+    Retrieve all assessment data from the database.
+    
+    Returns:
+        JSON response with assessment data or error message
+    """
     try:
-        connection = get_db_connection()
-        if connection:
-            try:
-                cursor = connection.cursor(dictionary=True)
-                cursor.execute("SELECT * FROM assessments ORDER BY timestamp DESC")
-                data = cursor.fetchall()
-
-                # Convert datetime objects to ISO format strings
-                for item in data:
-                    item["timestamp"] = item["timestamp"].isoformat()
-
-                return jsonify(data)
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
-            finally:
-                if connection.is_connected():
-                    cursor.close()
-                    connection.close()
+        # Get optional query parameters
+        limit = request.args.get('limit', type=int)
+        source = request.args.get('source', type=str)
+        
+        # Retrieve assessments from database
+        if source:
+            assessments = database_service.get_assessments_by_source(source, limit)
         else:
-            return jsonify({"error": "Database connection failed"}), 500
+            assessments = database_service.get_all_assessments(limit)
+        
+        # Convert to dictionary format for JSON response
+        data = [assessment.to_dict() for assessment in assessments]
+        
+        logger.info(f"Retrieved {len(data)} assessments (source: {source}, limit: {limit})")
+        return jsonify(data)
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error retrieving assessment data: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to retrieve assessment data"}), 500
+
+
+@app.route("/assessment_stats")
+def get_assessment_stats() -> Dict[str, Any]:
+    """
+    Get statistics about assessments in the database.
+    
+    Returns:
+        JSON response with statistics or error message
+    """
+    try:
+        stats = database_service.get_assessment_stats()
+        logger.debug(f"Retrieved assessment statistics: {stats}")
+        return jsonify(stats)
+
+    except Exception as e:
+        logger.error(f"Error retrieving assessment statistics: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to retrieve statistics"}), 500
+
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(error) -> Dict[str, Any]:
+    """Handle 404 errors."""
+    return jsonify({"error": "Resource not found"}), 404
+
+
+@app.errorhandler(500)
+def internal_error(error) -> Dict[str, Any]:
+    """Handle 500 errors."""
+    logger.error(f"Internal server error: {str(error)}")
+    return jsonify({"error": "Internal server error"}), 500
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error) -> Dict[str, Any]:
+    """Handle file too large errors."""
+    return jsonify({"error": "File too large"}), 413
+
+
+# Health check endpoint
+@app.route("/health")
+def health_check() -> Dict[str, Any]:
+    """Health check endpoint for monitoring."""
+    try:
+        # Test database connection
+        db_status = database_service.test_connection()
+        
+        return jsonify({
+            "status": "healthy" if db_status else "degraded",
+            "database": "connected" if db_status else "disconnected",
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
-    socketio.run(app, debug=True)  # Use socketio.run
+    logger.info("Starting Kaong Detection Flask application")
+    
+    try:
+        # Run with SocketIO
+        socketio.run(
+            app, 
+            debug=FLASK_CONFIG['DEBUG'],
+            host=FLASK_CONFIG['HOST'],
+            port=FLASK_CONFIG['PORT']
+        )
+    except Exception as e:
+        logger.error(f"Failed to start application: {str(e)}")
+        raise
