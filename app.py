@@ -63,7 +63,6 @@ def data():
     return render_template("data.html")
 
 
-# noinspection D
 @app.route("/detect_frame", methods=["POST"])
 def detect_frame() -> Dict[str, Any]:
     """
@@ -87,7 +86,7 @@ def detect_frame() -> Dict[str, Any]:
 
         # Validate and process image
         try:
-            image, original_filename = image_service.validate_and_process_upload(file)
+            image, original_filename, original_dimensions = image_service.validate_and_process_upload(file)
         except ImageValidationError as e:
             logger.error(f"Image validation failed: {str(e)}")
             return jsonify({"error": str(e)}), 400
@@ -160,7 +159,6 @@ def handle_video_frame(data: Dict[str, Any]) -> None:
             image_bytes = base64.b64decode(image_data)
             filename = image_service.save_raw_image_data(image_bytes, prefix="kaong", source="camera")
             
-            # Create assessment record
             assessment = Assessment(
                 image_url=image_service.get_image_url(filename),
                 assessment=first_detection.assessment,
@@ -169,7 +167,6 @@ def handle_video_frame(data: Dict[str, Any]) -> None:
                 timestamp=datetime.now()
             )
             
-            # Save to database
             assessment_id = database_service.save_assessment(assessment)
             if assessment_id:
                 logger.debug(f"Saved WebSocket assessment {assessment_id}: {filename}")
@@ -214,7 +211,7 @@ def save_assessment() -> Dict[str, Any]:
 
         # Validate and process image
         try:
-            image, original_filename = image_service.validate_and_process_upload(file)
+            image, original_filename, original_dimensions = image_service.validate_and_process_upload(file)
         except ImageValidationError as e:
             logger.error(f"Image validation failed in save_assessment: {str(e)}")
             return jsonify({"success": False, "error": str(e)}), 400

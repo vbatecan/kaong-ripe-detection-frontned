@@ -9,22 +9,18 @@ function openCamera() {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const scanContainer = document.getElementById('scanContainer');
-
-    // Hide the scan image and text when camera opens
     const scanImage = scanContainer.querySelector('.scanpng');
     const scanTitle = scanContainer.querySelector('h2');
     if (scanImage) scanImage.style.display = 'none';
     if (scanTitle) scanTitle.style.display = 'none';
 
-    // Show camera container
     cameraContainer.style.display = "block";
 
-    // Initialize Socket.IO connection
-    socket = io(); // Connects to the server that served the page
+    socket = io();
 
     socket.on('connect', () => {
         console.log('Connected to WebSocket server');
-        cameraStarted = true; // Set cameraStarted to true only after connection
+        cameraStarted = true;
     });
 
     socket.on('disconnect', () => {
@@ -36,10 +32,8 @@ function openCamera() {
         // console.log('Detections received:', data);
         if (data.detections && data.detections.length > 0) {
             drawDetections(data); 
-            // Assessment saving is now handled by the backend for WebSocket stream
         } else {
             // console.log("No detections in data or detections array is empty.");
-            // Optionally, clear previous detections if server sends empty results for no detections
              const canvas = document.getElementById('canvas');
              const ctx = canvas.getContext('2d');
              const video = document.getElementById('video');
@@ -50,11 +44,10 @@ function openCamera() {
 
     socket.on('detection_error', (data) => {
         console.error("Detection error from server:", data.error);
-        // Optionally, display this error to the user
+        // Pwede din idisplay yung error sa user using dialogs or UI elements
     });
 
-    // Get user media with constraints
-    navigator.mediaDevices.getUserMedia({ 
+    navigator.mediaDevices.getUserMedia({
         video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
@@ -68,7 +61,6 @@ function openCamera() {
         video.onloadedmetadata = () => {
             video.play()
                 .then(() => {
-                    // Set canvas dimensions after video is playing
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     canvas.style.display = 'block'; // Make sure canvas is visible
@@ -82,7 +74,6 @@ function openCamera() {
     .catch(err => {
         console.error("Camera error:", err);
         alert("Error accessing camera. Please make sure you have granted camera permissions.");
-        // Show the scan image and text again if camera fails
         if (scanImage) scanImage.style.display = 'block';
         if (scanTitle) scanTitle.style.display = 'block';
     });
@@ -129,7 +120,6 @@ function closeUpload() {
     const uploadCanvas = document.getElementById('uploadCanvas');
     uploadPreviewContainer.style.display = 'none';
     
-    // Clear the file input so the same file can be uploaded again
     document.getElementById('imageUpload').value = '';
 }
 
@@ -202,9 +192,33 @@ function drawDetections(result) {
 
     if (result.detections) {
         result.detections.forEach(detection => {
-            const [x1, y1, x2, y2] = detection.box;
-            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-            // ctx.fillText(`${detection.label} (${(detection.score * 100).toFixed(1)}%)`, x1, y1 - 5);
+            // Use relative coordinates to scale to current canvas size
+            if (detection.box_relative && detection.box_relative.length === 4) {
+                const [rel_x1, rel_y1, rel_x2, rel_y2] = detection.box_relative;
+                
+                // Scale relative coordinates to current canvas dimensions
+                const x1 = rel_x1 * canvas.width;
+                const y1 = rel_y1 * canvas.height;
+                const x2 = rel_x2 * canvas.width;
+                const y2 = rel_y2 * canvas.height;
+                
+                const width = x2 - x1;
+                const height = y2 - y1;
+                
+                // Draw bounding box
+                ctx.strokeRect(x1, y1, width, height);
+                
+                // Draw label if score is high enough
+                if (detection.score > 0.1) {
+                    const label = `${detection.label} (${(detection.score * 100).toFixed(1)}%)`;
+                    ctx.fillText(label, x1, y1 - 5);
+                }
+            } else {
+                // Fallback to absolute coordinates (for backward compatibility)
+                console.warn('Using absolute coordinates - may not align properly');
+                const [x1, y1, x2, y2] = detection.box;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
         });
     }
 }
@@ -310,33 +324,40 @@ document.getElementById('imageUpload').addEventListener('change', async function
                     ctx.font = "18px Arial";
                     
                     result.detections.forEach(detection => {
-                        // Get original box coordinates
-                        const [x1, y1, x2, y2] = detection.box;
-                        
-                        // Scale and adjust coordinates
-                        const boxX = x + (x1 * scale);
-                        const boxY = y + (y1 * scale);
-                        const boxWidth = (x2 - x1) * scale;
-                        const boxHeight = (y2 - y1) * scale;
-                        
-                        // Draw box
-                        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-                        
-                        // Draw label with background
-                        const label = `${detection.label} (${(detection.score * 100).toFixed(1)}%)`;
-                        const labelY = boxY > 30 ? boxY - 10 : boxY + 30;
-                        
-                        // Measure text width
-                        const textWidth = ctx.measureText(label).width;
-                        
-                        // Draw label background
-                        // TODO: REDO
-                        // ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                        // ctx.fillRect(boxX, labelY - 20, textWidth + 10, 25);
-                        
-                        // Draw text
-                        ctx.fillStyle = "red";
-                        // ctx.fillText(label, boxX + 5, labelY);
+                        // Use relative coordinates for proper scaling
+                        if (detection.box_relative && detection.box_relative.length === 4) {
+                            const [rel_x1, rel_y1, rel_x2, rel_y2] = detection.box_relative;
+                            
+                            // Calculate box coordinates relative to the scaled image area
+                            const boxX = x + (rel_x1 * scaledWidth);
+                            const boxY = y + (rel_y1 * scaledHeight);
+                            const boxWidth = (rel_x2 - rel_x1) * scaledWidth;
+                            const boxHeight = (rel_y2 - rel_y1) * scaledHeight;
+                            
+                            // Draw box
+                            ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+                            
+                            // Draw label with proper positioning
+                            if (detection.score > 0.1) {  // Only show label for confident detections
+                                const label = `${detection.label} (${(detection.score * 100).toFixed(1)}%)`;
+                                const labelY = boxY > 30 ? boxY - 10 : boxY + 30;
+                                
+                                // Set text color same as box
+                                ctx.fillText(label, boxX + 5, labelY);
+                            }
+                        } else {
+                            // Fallback to absolute coordinates (backward compatibility)
+                            console.warn('Using absolute coordinates for upload detection - may not align properly');
+                            const [x1, y1, x2, y2] = detection.box;
+                            
+                            // Scale and adjust coordinates (old method)
+                            const boxX = x + (x1 * scale);
+                            const boxY = y + (y1 * scale);
+                            const boxWidth = (x2 - x1) * scale;
+                            const boxHeight = (y2 - y1) * scale;
+                            
+                            ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+                        }
                     });
                 }
                 

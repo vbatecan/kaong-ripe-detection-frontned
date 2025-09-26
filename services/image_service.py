@@ -88,7 +88,7 @@ class ImageService:
         resized_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         return resized_image
     
-    def validate_and_process_upload(self, file: FileStorage) -> Tuple[Image.Image, str]:
+    def validate_and_process_upload(self, file: FileStorage) -> Tuple[Image.Image, str, Tuple[int, int]]:
         """
         Validate and process an uploaded file.
         
@@ -96,7 +96,7 @@ class ImageService:
             file: Flask FileStorage object from request.files
             
         Returns:
-            Tuple of (processed PIL Image, original filename)
+            Tuple of (processed PIL Image, original filename, original dimensions (width, height))
             
         Raises:
             ImageValidationError: If validation fails
@@ -120,14 +120,17 @@ class ImageService:
             except Exception as e:
                 raise ImageValidationError(f"Invalid image file: {str(e)}")
             
+            # Store original dimensions before any processing
+            original_dimensions = image.size  # (width, height)
+            
             # Auto-orient the image (handle EXIF rotation)
             image = ImageOps.exif_transpose(image)
             
             # Resize if needed
             image = self._resize_image_if_needed(image)
             
-            logger.info(f"Successfully processed upload: {file.filename}, size: {image.size}")
-            return image, file.filename
+            logger.info(f"Successfully processed upload: {file.filename}, original: {original_dimensions}, processed: {image.size}")
+            return image, file.filename, original_dimensions
             
         except ImageValidationError:
             raise

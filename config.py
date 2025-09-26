@@ -10,16 +10,16 @@ INFERENCE_DEVICE = "cuda"
 
 # Model configuration  
 DEFAULT_MODEL_PATH = "yolo11n.pt"
-CUSTOM_MODEL_PATH = "best.pt"
+CUSTOM_MODEL_PATH = "best_2.pt"
 
 # Detection thresholds
-CONFIDENCE_THRESHOLD = 0.2
+CONFIDENCE_THRESHOLD = 0.5
 DATABASE_SAVE_CONFIDENCE_LEVEL = 0.8
 
 # Image processing configuration
 MAX_IMAGE_WIDTH = 1920
 MAX_IMAGE_HEIGHT = 1080
-IMAGE_QUALITY = 95
+IMAGE_QUALITY = 100
 
 # File and directory configuration
 UPLOAD_FOLDER = "static/uploads"
